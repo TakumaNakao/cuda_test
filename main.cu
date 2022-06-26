@@ -1,10 +1,13 @@
+#include <iostream>
 #include <stdio.h>
 #include <array>
 #include <vector>
 #include <chrono>
 
 #include <cuda.h>
-#include<cuda_runtime.h>
+#include <cuda_runtime.h>
+
+#include <GLFW/glfw3.h>
 
 #define GLM_FORCE_CUDA
 #include "glm/glm.hpp"
@@ -67,15 +70,55 @@ private:
     std::vector<T> v_;
 };
 
+static const int WIN_WIDTH = 500;                 // ウィンドウの幅
+static const int WIN_HEIGHT = 500;                 // ウィンドウの高さ
+static const std::string WIN_TITLE = "OpenGL Course";     // ウィンドウのタイトル
 
-int main() {
-    std::vector<float> vec_a;
-    std::vector<float> vec_b;
-    for (size_t i = 0; i < 1000000; i++) {
-        vec_a.push_back(i);
-        vec_b.push_back(i);
+// ユーザ定義のOpenGLの初期化
+void initializeGL()
+{
+    // 背景色の設定
+    glClearColor(1.0f, 0.0f, 0.0f, 1.0f);
+}
+
+// ユーザ定義のOpenGL描画
+void paintGL() 
+{
+    // 背景色の描画
+    glClear(GL_COLOR_BUFFER_BIT);
+}
+
+int main() 
+{
+    // OpenGLを初期化する
+    if (glfwInit() == GL_FALSE) {
+        fprintf(stderr, "Initialization failed!\n");
+        return 1;
     }
-    TestClass<float> a(vec_a);
-    auto c = a.add(vec_b);
+
+    // Windowの作成
+    GLFWwindow* window = glfwCreateWindow(WIN_WIDTH, WIN_HEIGHT, WIN_TITLE.c_str(),NULL, NULL);
+    if (window == NULL) {
+        fprintf(stderr, "Window creation failed!");
+        glfwTerminate();
+        return 1;
+    }
+
+    // OpenGLの描画対象にWindowを追加
+    glfwMakeContextCurrent(window);
+
+    // 初期化
+    initializeGL();
+
+    // メインループ
+    while (glfwWindowShouldClose(window) == GL_FALSE) 
+    {
+        // 描画
+        paintGL();
+
+        // 描画用バッファの切り替え
+        glfwSwapBuffers(window);
+        glfwPollEvents();
+    }
     return 0;
 }
