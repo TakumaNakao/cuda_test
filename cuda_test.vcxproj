@@ -81,8 +81,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>C:\Users\TAKUMA\source\repos\cuda_test\glfw_win64\include;$(IncludePath)</IncludePath>
-    <LibraryPath>C:\Users\TAKUMA\source\repos\cuda_test\glfw_win64\lib-vc2019;$(LibraryPath)</LibraryPath>
+    <IncludePath>C:\Users\TAKUMA\source\repos\cuda_test\glfw_win64\include;C:\Users\TAKUMA\source\repos\cuda_test\glew\include;$(IncludePath)</IncludePath>
+    <LibraryPath>C:\Users\TAKUMA\source\repos\cuda_test\glfw_win64\lib-vc2019;C:\Users\TAKUMA\source\repos\cuda_test\glew\lib\Release\x64;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
@@ -129,7 +129,7 @@
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>opengl32.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>opengl32.lib;glfw3.lib;glew32s.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

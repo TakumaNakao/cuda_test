@@ -7,7 +7,10 @@
 #include <cuda.h>
 #include <cuda_runtime.h>
 
+#define GLEW_STATIC
+#include <GL/glew.h>
 #include <GLFW/glfw3.h>
+#include <cstdlib>
 
 #define GLM_FORCE_CUDA
 #include "glm/glm.hpp"
@@ -92,20 +95,36 @@ int main()
 {
     // OpenGL‚ğ‰Šú‰»‚·‚é
     if (glfwInit() == GL_FALSE) {
-        fprintf(stderr, "Initialization failed!\n");
+        std::cerr << "Can't initialize GLFW" << std::endl;
         return 1;
     }
+
+    atexit(glfwTerminate);
+
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 6);
+    glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+    glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
     // Window‚Ìì¬
     GLFWwindow* window = glfwCreateWindow(WIN_WIDTH, WIN_HEIGHT, WIN_TITLE.c_str(),NULL, NULL);
     if (window == NULL) {
-        fprintf(stderr, "Window creation failed!");
-        glfwTerminate();
+        std::cerr << "Can't create GLFW window." << std::endl;
         return 1;
     }
 
     // OpenGL‚Ì•`‰æ‘ÎÛ‚ÉWindow‚ğ’Ç‰Á
     glfwMakeContextCurrent(window);
+
+    glewExperimental = GL_TRUE;
+    if (glewInit() != GLEW_OK)
+    {
+        // GLEW ‚Ì‰Šú‰»‚É¸”s‚µ‚½
+        std::cerr << "Can't initialize GLEW" << std::endl;
+        return 1;
+    }
+
+    glfwSwapInterval(1);
 
     // ‰Šú‰»
     initializeGL();
