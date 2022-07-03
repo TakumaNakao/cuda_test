@@ -18,6 +18,7 @@
 #define GLM_FORCE_CUDA
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
+#include "glm/gtx/string_cast.hpp"
 
 #include "shader.hpp"
 
@@ -144,16 +145,17 @@ int main()
 
     // バーテックスシェーダのソースプログラム
     static const GLchar vsrc[] =
-        "#version 150 core\n"
+        "#version 460 core\n"
+        "uniform mat4 MVP;\n"
         "in vec4 pv;\n"
         "void main(void)\n"
         "{\n"
-        "  gl_Position = pv;\n"
+        "  gl_Position = MVP * pv;\n"
         "}\n";
 
     // フラグメントシェーダのソースプログラム
     static const GLchar fsrc[] =
-        "#version 150 core\n"
+        "#version 460 core\n"
         "out vec4 fc;\n"
         "void main(void)\n"
         "{\n"
@@ -175,12 +177,38 @@ int main()
     // 頂点配列オブジェクトの作成
     GLuint vao = createObject(vertices, position);
 
+    
+
+
     // メインループ
     while (glfwWindowShouldClose(window) == GL_FALSE) 
     {
         glClear(GL_COLOR_BUFFER_BIT);
         // 描画
         glUseProgram(program);
+
+        glm::mat4 modelMat = glm::mat4(1.0);
+
+        // View行列を計算
+        glm::mat4 viewMat = glm::lookAt(
+            glm::vec3(2.0, 7.0, 2.0), // ワールド空間でのカメラの座標
+            glm::vec3(0.0, 0.0, 0.0), // 見ている位置の座標
+            glm::vec3(0.0, 1.0, 1.0)  // 上方向を示す。(0,1.0,0)に設定するとy軸が上になります
+        );
+
+        // Projection行列を計算
+        glm::mat4 projectionMat = glm::perspective(
+            glm::radians(20.0f), // ズームの度合い(通常90～30)
+            (GLfloat)WIN_WIDTH / (GLfloat)WIN_HEIGHT,		// アスペクト比
+            0.1f,		// 近くのクリッピング平面
+            100.0f		// 遠くのクリッピング平面
+        );
+
+        // ModelViewProjection行列を計算
+        glm::mat4 mvpMat = projectionMat * viewMat * modelMat;
+
+        GLuint matrixID = glGetUniformLocation(program, "MVP");
+        glUniformMatrix4fv(matrixID, 1, GL_FALSE, &mvpMat[0][0]);
 
         glBindVertexArray(vao);
         glDrawArrays(GL_LINE_LOOP, 0, vertices);
