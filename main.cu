@@ -78,6 +78,31 @@ private:
     std::vector<T> v_;
 };
 
+// 頂点配列オブジェクトの作成
+static GLuint createObject(GLuint vertices, const GLfloat(*position)[2])
+{
+    // 頂点配列オブジェクト
+    GLuint vao;
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    // 頂点バッファオブジェクト
+    GLuint vbo;
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * 2 * vertices, position, GL_STATIC_DRAW);
+
+    // 結合されている頂点バッファオブジェクトを attribute 変数から参照できるようにする
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 0, 0);
+    glEnableVertexAttribArray(0);
+
+    // 頂点バッファオブジェクトと頂点配列オブジェクトの結合を解除する
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glBindVertexArray(0);
+
+    return vao;
+}
+
 static const int WIN_WIDTH = 500;                 // ウィンドウの幅
 static const int WIN_HEIGHT = 500;                 // ウィンドウの高さ
 static const std::string WIN_TITLE = "OpenGL Course";     // ウィンドウのタイトル
@@ -117,69 +142,49 @@ int main()
 
     glfwSwapInterval(1);
 
-    // 初期化
-    GLint shader = makeShader("shader.vert", "shader.frag");
-    // 2枚の三角ポリゴン
-    std::vector<glm::vec3> positionList = {
-        glm::vec3(0, 0, 1),glm::vec3(1,0, 0),glm::vec3(0, 0, 0),
-        glm::vec3(0, 0, 1),glm::vec3(0, 0, 0),glm::vec3(0, 1, 0),
-    };
-    // attribute を指定する
-    GLint positionLocation = glGetAttribLocation(shader, "position");
-    // 頂点バッファオブジェクトを作成
-    GLuint positionBuffer;
-    glGenBuffers(1, &positionBuffer);
-    // GPU側に頂点バッファオブジェクトにメモリ領域を確保する
-    glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(glm::vec3) * positionList.size(), positionList.data(), GL_STATIC_DRAW);
+    // バーテックスシェーダのソースプログラム
+    static const GLchar vsrc[] =
+        "#version 150 core\n"
+        "in vec4 pv;\n"
+        "void main(void)\n"
+        "{\n"
+        "  gl_Position = pv;\n"
+        "}\n";
 
-    GLuint matrixID = glGetUniformLocation(shader, "MVP");
+    // フラグメントシェーダのソースプログラム
+    static const GLchar fsrc[] =
+        "#version 150 core\n"
+        "out vec4 fc;\n"
+        "void main(void)\n"
+        "{\n"
+        "  fc = vec4(1.0, 0.0, 0.0, 0.0);\n"
+        "}\n";
+
+    // 初期化
+    GLuint program = createProgram(vsrc, "pv", fsrc, "fc");
+    // 図形データ
+    static const GLfloat position[][2] =
+    {
+      { -0.5f, -0.5f },
+      {  0.5f, -0.5f },
+      {  0.5f,  0.5f },
+      { -0.5f,  0.5f }
+    };
+    static const int vertices = sizeof position / sizeof position[0];
+
+    // 頂点配列オブジェクトの作成
+    GLuint vao = createObject(vertices, position);
 
     // メインループ
     while (glfwWindowShouldClose(window) == GL_FALSE) 
     {
+        glClear(GL_COLOR_BUFFER_BIT);
         // 描画
-        glUseProgram(shader);
+        glUseProgram(program);
 
-        glEnable(GL_DEPTH_TEST);
-        glDepthFunc(GL_LESS);
-        glClearColor(0.2f, 0.2f, 0.2f, 0.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
-        // 宣言時には単位行列が入っている
-        glm::mat4 modelMat, viewMat, projectionMat;
-
-        // View行列を計算
-        viewMat = glm::lookAt(
-            glm::vec3(2.0, 2.0, 2.0), // ワールド空間でのカメラの座標
-            glm::vec3(0.0, 0.0, 0.0), // 見ている位置の座標
-            glm::vec3(0.0, 0.0, 1.0)  // 上方向を示す。(0,1.0,0)に設定するとy軸が上になります
-        );
-
-        // Projection行列を計算
-        projectionMat = glm::perspective(
-            glm::radians(45.0f), // ズームの度合い(通常90～30)
-            (GLfloat)WIN_WIDTH / (GLfloat)WIN_HEIGHT,		// アスペクト比
-            0.1f,		// 近くのクリッピング平面
-            100.0f		// 遠くのクリッピング平面
-        );
-
-        // ModelViewProjection行列を計算
-        glm::mat4 mvpMat = projectionMat * viewMat * modelMat;
-
-        // 現在バインドしているシェーダのuniform変数"MVP"に変換行列を送る
-        // 4つ目の引数は行列の最初のアドレスを渡しています。
-        glUniformMatrix4fv(matrixID, 1, GL_FALSE, &mvpMat[0][0]);
-
-        // positionLocationで指定されたattributeを有効化
-        glEnableVertexAttribArray(positionLocation);
-        // positionBufferにバインド
-        glBindBuffer(GL_ARRAY_BUFFER, positionBuffer);
-        // attribute変数positionに割り当てる
-        // GPU内メモリに送っておいたデータをバーテックスシェーダーで使う指定です
-        glVertexAttribPointer(positionLocation, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-
-        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(vao);
+        glDrawArrays(GL_LINE_LOOP, 0, vertices);
+        glBindVertexArray(0);
 
         // 描画用バッファの切り替え
         glfwSwapBuffers(window);

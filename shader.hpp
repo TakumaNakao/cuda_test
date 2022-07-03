@@ -14,82 +14,83 @@
 #include "glm/glm.hpp"
 #include "glm/gtc/matrix_transform.hpp"
 
-int readShaderSource(GLuint shaderObj, std::string fileName)
+// シェーダオブジェクトのコンパイル結果を表示する
+static GLboolean printShaderInfoLog(GLuint shader, const char* str)
 {
-    //ファイルの読み込み
-    std::ifstream ifs(fileName);
-    if (!ifs)
-    {
-        std::cout << "error" << std::endl;
-        return -1;
-    }
+	// コンパイル結果を取得する
+	GLint status;
+	glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+	if (status == GL_FALSE) std::cerr << "Compile Error in " << str << std::endl;
 
-    std::string source;
-    std::string line;
-    while (getline(ifs, line))
-    {
-        source += line + "\n";
-    }
+	// シェーダのコンパイル時のログの長さを取得する
+	GLsizei bufSize;
+	glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &bufSize);
 
-    // シェーダのソースプログラムをシェーダオブジェクトへ読み込む
-    const GLchar* sourcePtr = (const GLchar*)source.c_str();
-    GLint length = source.length();
-    glShaderSource(shaderObj, 1, &sourcePtr, &length);
+	if (bufSize > 1)
+	{
+		// シェーダのコンパイル時のログの内容を取得する
+		GLchar* infoLog = new GLchar[bufSize];
+		GLsizei length;
+		glGetShaderInfoLog(shader, bufSize, &length, infoLog);
+		std::cerr << infoLog << std::endl;
+		delete[] infoLog;
+	}
 
-    return 0;
+	return (GLboolean)status;
 }
 
-GLint makeShader(std::string vertexFileName, std::string fragmentFileName)
+// プログラムオブジェクトのリンク結果を表示する
+static GLboolean printProgramInfoLog(GLuint program)
 {
-    // シェーダーオブジェクト作成
-    GLuint vertShaderObj = glCreateShader(GL_VERTEX_SHADER);
-    GLuint fragShaderObj = glCreateShader(GL_FRAGMENT_SHADER);
-    GLuint shader;
+	// リンク結果を取得する
+	GLint status;
+	glGetProgramiv(program, GL_LINK_STATUS, &status);
+	if (status == GL_FALSE) std::cerr << "Link Error" << std::endl;
 
-    // シェーダーコンパイルとリンクの結果用変数
-    GLint compiled, linked;
+	// シェーダのリンク時のログの長さを取得する
+	GLsizei bufSize;
+	glGetProgramiv(program, GL_INFO_LOG_LENGTH, &bufSize);
 
-    /* シェーダーのソースプログラムの読み込み */
-    if (readShaderSource(vertShaderObj, vertexFileName)) return -1;
-    if (readShaderSource(fragShaderObj, fragmentFileName)) return -1;
+	if (bufSize > 1)
+	{
+		// シェーダのリンク時のログの内容を取得する
+		GLchar* infoLog = new GLchar[bufSize];
+		GLsizei length;
+		glGetProgramInfoLog(program, bufSize, &length, infoLog);
+		std::cerr << infoLog << std::endl;
+		delete[] infoLog;
+	}
 
-    /* バーテックスシェーダーのソースプログラムのコンパイル */
-    glCompileShader(vertShaderObj);
-    glGetShaderiv(vertShaderObj, GL_COMPILE_STATUS, &compiled);
-    if (compiled == GL_FALSE)
-    {
-        fprintf(stderr, "Compile error in vertex shader.\n");
-        return -1;
-    }
+	return (GLboolean)status;
+}
 
-    /* フラグメントシェーダーのソースプログラムのコンパイル */
-    glCompileShader(fragShaderObj);
-    glGetShaderiv(fragShaderObj, GL_COMPILE_STATUS, &compiled);
-    if (compiled == GL_FALSE)
-    {
-        fprintf(stderr, "Compile error in fragment shader.\n");
-        return -1;
-    }
+// プログラムオブジェクトの作成
+static GLuint createProgram(const char* vsrc, const char* pv, const char* fsrc, const char* fc)
+{
+	// バーテックスシェーダのシェーダオブジェクト
+	GLuint vobj = glCreateShader(GL_VERTEX_SHADER);
+	glShaderSource(vobj, 1, &vsrc, NULL);
+	glCompileShader(vobj);
+	printShaderInfoLog(vobj, "vertex shader");
 
-    /* プログラムオブジェクトの作成 */
-    shader = glCreateProgram();
+	// フラグメントシェーダのシェーダオブジェクトの作成
+	GLuint fobj = glCreateShader(GL_FRAGMENT_SHADER);
+	glShaderSource(fobj, 1, &fsrc, NULL);
+	glCompileShader(fobj);
+	printShaderInfoLog(fobj, "fragment shader");
 
-    /* シェーダーオブジェクトのシェーダープログラムへの登録 */
-    glAttachShader(shader, vertShaderObj);
-    glAttachShader(shader, fragShaderObj);
+	// シェーダオブジェクトの取り付け
+	GLuint program = glCreateProgram();
+	glAttachShader(program, vobj);
+	glDeleteShader(vobj);
+	glAttachShader(program, fobj);
+	glDeleteShader(fobj);
 
-    /* シェーダーオブジェクトの削除 */
-    glDeleteShader(vertShaderObj);
-    glDeleteShader(fragShaderObj);
+	// プログラムオブジェクトのリンク
+	glBindAttribLocation(program, 0, pv);
+	glBindFragDataLocation(program, 0, fc);
+	glLinkProgram(program);
+	printProgramInfoLog(program);
 
-    /* シェーダープログラムのリンク */
-    glLinkProgram(shader);
-    glGetProgramiv(shader, GL_LINK_STATUS, &linked);
-    if (linked == GL_FALSE)
-    {
-        fprintf(stderr, "Link error.\n");
-        return -1;
-    }
-
-    return shader;
+	return program;
 }
